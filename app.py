@@ -1,32 +1,28 @@
-# -*- coding: utf-8 -*- # Add encoding declaration for broader compatibility
+# -*- coding: utf-8 -*-
 import gradio as gr
 import os
 import fitz  # PyMuPDF
 import pandas as pd
-from fpdf import FPDF  # Import FPDF2
+from fpdf import FPDF
 from pathlib import Path
-import google.generativeai as genai  # Correct Gemini Import
-from tqdm import tqdm  # Add tqdm import
+import google.generativeai as genai
 import json
 from enum import Enum
 import zipfile
-from datetime import datetime, timedelta
+from datetime import datetime
 import re
 import time
-import html  # Import the html module for escaping
-from dotenv import load_dotenv  # Load .env support
+from dotenv import load_dotenv
 
-# --------------------------------------------------------------------------
-# Configuration & Setup
-# --------------------------------------------------------------------------
-
-# 🔐 Load API Keys from Environment
+# Load environment variables from .env
 load_dotenv()
-API_KEYS = os.environ["GEMINI_KEYS"].split(",")
-current_key_index = 0
 
-if "YOUR_GEMINI_API" in API_KEYS[0] or "YOUR_GEMINI_API" in API_KEYS[1]:
-    print("⚠️ WARNING: Please replace the placeholder API keys in the .env file.")
+# 🔐 Load API keys from .env
+API_KEYS = os.getenv("GEMINI_KEYS", "").split(",")
+API_KEYS = [key.strip() for key in API_KEYS if key.strip()]
+
+if not API_KEYS:
+    raise ValueError("❌ No Gemini API keys found. Please set GEMINI_KEYS in your .env file.")
 
 current_key_index = 0
 try:
@@ -191,36 +187,82 @@ def generate_pdf_report(file_name, json_data):
         print(f"✅ Successfully generated PDF report: {output_path}"); return str(output_path)
     except Exception as e: print(f"🚨 Error generating PDF report: {e}"); return None
 
-def safe_generate_content(model, prompt, max_retries=3):
-    """Safely generate content using the AI model."""
-    global current_key_index; initial_key_index = current_key_index
+def safe_generate_content(model=None, prompt="", max_retries=3):
+    """Safely generate content using Gemini AI, with API key rotation."""
+    global current_key_index
+    initial_key_index = current_key_index
+
     for attempt in range(max_retries):
-        current_api_key = API_KEYS[current_key_index]; print(f"\nAttempt {attempt + 1}/{max_retries}: Using API Key index {current_key_index}")
+        current_api_key = API_KEYS[current_key_index]
+        print(f"\n🔁 Attempt {attempt + 1}/{max_retries} — Using Gemini Key #{current_key_index + 1}")
+
         try:
-            genai.configure(api_key=current_api_key); current_model = genai.GenerativeModel("models/gemini-1.5-flash-latest")
-            generation_config = genai.GenerationConfig(response_mime_type="text/plain", temperature=0.1, max_output_tokens=4096)
-            safety_settings = [{"category": c, "threshold": "BLOCK_MEDIUM_AND_ABOVE"} for c in ["HARM_CATEGORY_HARASSMENT", "HARM_CATEGORY_HATE_SPEECH", "HARM_CATEGORY_SEXUALLY_EXPLICIT", "HARM_CATEGORY_DANGEROUS_CONTENT"]]
-            print("Sending request to Gemini API..."); response = current_model.generate_content(prompt, generation_config=generation_config, safety_settings=safety_settings, request_options={'timeout': 120})
-            print("Received response from Gemini API.")
+            # Reconfigure model each time with current key
+            genai.configure(api_key=current_api_key)
+            model = genai.GenerativeModel("models/gemini-1.5-flash-latest")
+
+            generation_config = genai.GenerationConfig(
+                response_mime_type="text/plain",
+                temperature=0.1,
+                max_output_tokens=4096
+            )
+
+            safety_settings = [
+                {"category": c, "threshold": "BLOCK_MEDIUM_AND_ABOVE"} for c in [
+                    "HARM_CATEGORY_HARASSMENT",
+                    "HARM_CATEGORY_HATE_SPEECH",
+                    "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                    "HARM_CATEGORY_DANGEROUS_CONTENT"
+                ]
+            ]
+
+            print("📡 Sending request to Gemini API...")
+            response = model.generate_content(
+                prompt,
+                generation_config=generation_config,
+                safety_settings=safety_settings,
+                request_options={'timeout': 120}
+            )
+
+            print("✅ Response received.")
+
+            # Handle safety block
             if not response.candidates:
-                block_reason = "Unknown";
+                block_reason = "Not specified"
                 try:
-                    if response.prompt_feedback: block_reason = response.prompt_feedback.block_reason.name if response.prompt_feedback.block_reason else "Not specified"
-                except Exception: pass # Ignore errors getting block reason details
-                raise Exception(f"Content generation blocked by safety settings. Reason: {block_reason}")
-            if hasattr(response, 'text'): print(f"Successfully generated content with key index {current_key_index}."); return response
-            else: raise Exception("Generation successful but response format unexpected (no text).")
+                    block_reason = response.prompt_feedback.block_reason.name if response.prompt_feedback and response.prompt_feedback.block_reason else "Not specified"
+                except Exception:
+                    pass
+                raise Exception(f"🛑 Content generation blocked due to safety settings. Reason: {block_reason}")
+
+            if hasattr(response, 'text') and response.text:
+                print(f"🎯 Success with key #{current_key_index + 1}")
+                return response
+
+            raise Exception("Generation succeeded but unexpected response format (no text).")
+
         except Exception as e:
-            error_str = str(e).lower(); print(f"🚨 Error during generation with key index {current_key_index}: {e}")
-            is_quota_error = "quota" in error_str or "429" in error_str or "resource has been exhausted" in error_str; is_auth_error = "permission denied" in error_str or "api key not valid" in error_str or "api key invalid" in error_str or "401" in error_str or "403" in error_str
+            error_str = str(e).lower()
+            print(f"🚨 Error with key #{current_key_index + 1}: {e}")
+
+            is_quota_error = any(term in error_str for term in ["quota", "429", "resource has been exhausted"])
+            is_auth_error = any(term in error_str for term in ["permission denied", "api key not valid", "api key invalid", "401", "403"])
             is_safety_block = "blocked by safety settings" in error_str or "response was blocked" in error_str
-            if is_safety_block: raise e # Don't retry safety blocks
+
+            if is_safety_block:
+                raise e  # Don't retry safety blocks
             elif is_quota_error or is_auth_error:
+                # Rotate to next key
                 current_key_index = (current_key_index + 1) % len(API_KEYS)
-                if current_key_index == initial_key_index and attempt > 0: raise Exception("All API keys failed.") from e
-                print(f"Switching API key. Retrying with index: {current_key_index}"); time.sleep(2); continue
-            else: raise e # Raise other errors immediately
-    raise Exception(f"Failed to generate content after {max_retries} attempts.")
+                if current_key_index == initial_key_index and attempt > 0:
+                    raise Exception("🔁 All API keys exhausted or failed.") from e
+                print(f"🔃 Switching to backup key #{current_key_index + 1}...")
+                time.sleep(2)
+                continue
+            else:
+                raise e
+
+    raise Exception(f"❌ Failed after {max_retries} attempts.")
 
 def cleanup_old_reports():
     """Delete old reports."""
