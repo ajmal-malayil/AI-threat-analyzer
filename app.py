@@ -583,4 +583,4 @@ with gr.Blocks(css=css, theme=gr.themes.Soft()) as demo:
 
 # Launch the Gradio app
 if __name__ == "__main__":
-    demo.launch() # share=True for public link (use with caution)
+     demo.launch(server_name="0.0.0.0", server_port=10000) # share=True for public link (use with caution)
