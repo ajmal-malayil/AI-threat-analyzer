@@ -5,7 +5,7 @@ import fitz  # PyMuPDF
 import pandas as pd
 from fpdf import FPDF  # Import FPDF2
 from pathlib import Path
-import google.generativeai as genai # Correct Gemini Import
+import google.generativeai as genai  # Correct Gemini Import
 from tqdm import tqdm  # Add tqdm import
 import json
 from enum import Enum
@@ -13,20 +13,20 @@ import zipfile
 from datetime import datetime, timedelta
 import re
 import time
-import html # Import the html module for escaping
+import html  # Import the html module for escaping
+from dotenv import load_dotenv  # Load .env support
 
 # --------------------------------------------------------------------------
 # Configuration & Setup
 # --------------------------------------------------------------------------
 
-# 🔐 API KEYS (Replace with your actual keys or use environment variables)
-API_KEYS = [
-    "AIzaSyBwuO_nBGUs00DD0XLbqTcV0BMnHCmJpPk",  # Primary Key - REPLACE IF NEEDED
-    "AIzaSyAp-arqke6chT8neYBxoO2tIUG-AcOJkGo"   # Backup Key - REPLACE IF NEEDED
-]
+# 🔐 Load API Keys from Environment
+load_dotenv()
+API_KEYS = os.environ["GEMINI_KEYS"].split(",")
+current_key_index = 0
 
 if "YOUR_GEMINI_API" in API_KEYS[0] or "YOUR_GEMINI_API" in API_KEYS[1]:
-    print("⚠️ WARNING: Please replace the placeholder API keys in the API_KEYS list.")
+    print("⚠️ WARNING: Please replace the placeholder API keys in the .env file.")
 
 current_key_index = 0
 try:
