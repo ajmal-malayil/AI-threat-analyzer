@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import gradio as gr
 import os
+os.system("pip freeze")
 import fitz  # PyMuPDF
 import pandas as pd
 from fpdf import FPDF
