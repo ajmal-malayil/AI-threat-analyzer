@@ -3,3 +3,4 @@ fpdf
 pymupdf
 pandas
 google-generativeai
+python-dotenv
