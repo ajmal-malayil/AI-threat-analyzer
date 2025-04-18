@@ -505,8 +505,8 @@ with gr.Blocks(css=css, theme=gr.themes.Soft()) as demo:
         <div id="top-bar-content">
              <h1>🛡️ Enterprise Threat Analyzer Pro</h1>
              <div>
-                 <a href='#' target='https://ajmalmalayil.pages.dev/'>🌐 Portfolio</a>
-                 <a href='#' target='+971544566442'>💬 Contact</a>
+                 <a href= target='https://ajmalmalayil.pages.dev/'>🌐 Portfolio</a>
+                 <a href='#' target='https://wa.me/+971544566442'>💬 Contact</a>
              </div>
         </div>
         """) # Placeholder links
