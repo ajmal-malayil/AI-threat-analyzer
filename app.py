@@ -505,8 +505,8 @@ with gr.Blocks(css=css, theme=gr.themes.Soft()) as demo:
         <div id="top-bar-content">
              <h1>🛡️ Enterprise Threat Analyzer Pro</h1>
              <div>
-                 <a href='#' target='_blank'>🌐 Portfolio</a>
-                 <a href='#' target='_blank'>💬 Contact</a>
+                 <a href='#' target='https://ajmalmalayil.pages.dev/'>🌐 Portfolio</a>
+                 <a href='#' target='+971544566442'>💬 Contact</a>
              </div>
         </div>
         """) # Placeholder links
@@ -577,7 +577,7 @@ with gr.Blocks(css=css, theme=gr.themes.Soft()) as demo:
 
     gr.HTML("""
     <div class='footer'>
-        🛡️ Enterprise Threat Analyzer Pro | Developed by <b>Ajmal Malayil</b> | Powered by Google Gemini
+        🛡️ Enterprise Threat Analyzer Pro | Developed by <b>Ajmal Malayil</b> | Powered by GEN AI
     </div>
     """) # Placeholder developer name
 
