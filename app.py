@@ -162,6 +162,7 @@ def parse_json_response(response_text):
 
 def generate_pdf_report(file_name, json_data):
     """Generate a PDF report."""
+    print("🐞 [PDF START] --- ENTERING generate_pdf_report FUNCTION ---") # ADD THIS LINE
     pdf = None; output_path = None
     # Define font file paths. Ensure these files are in the same directory as app.py
     # or in a 'fonts' subdirectory. Adjust as needed for your deployment.
