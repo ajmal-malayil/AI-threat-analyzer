@@ -205,7 +205,8 @@ def generate_pdf_report(file_name, json_data):
         ]
 
         for key, value in report_data:
-            story.append(Paragraph(f"{key}: ", style_heading2) + Paragraph(f"{value}", style_normal))
+            story.append(Paragraph(f"{key}: ", style_heading2))
+            story.append(Paragraph(f"{value}", style_normal))
             story.append(Spacer(1, 0.05 * inch))
 
         story.append(Spacer(1, 0.5 * inch))
