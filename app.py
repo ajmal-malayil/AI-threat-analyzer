@@ -182,30 +182,30 @@ def generate_pdf_report(file_name, json_data):
         logger.info(f"[PDF CHECK] Font path: {path}, exists: {exists}")
         return exists
 
-    try:
-        found_regular = check_font_path(font_path) or check_font_path(os.path.join(fonts_dir, font_path))
-        found_bold = check_font_path(font_path_bold) or check_font_path(os.path.join(fonts_dir, font_path_bold))
+    # try:
+      #  found_regular = check_font_path(font_path) or check_font_path(os.path.join(fonts_dir, font_path))
+      #  found_bold = check_font_path(font_path_bold) or check_font_path(os.path.join(fonts_dir, font_path_bold))
 
-        if not found_regular or not found_bold:
-            error_message = f"🚨 [PDF ERROR] Font files not found. Ensure '{font_path}' and '{font_path_bold}' are alongside app.py or in a '{fonts_dir}' subdirectory."
-            logger.error(error_message)
-            raise FileNotFoundError(error_message)
+      #  if not found_regular or not found_bold:
+        #    error_message = f"🚨 [PDF ERROR] Font files not found. Ensure '{font_path}' and '{font_path_bold}' are alongside app.py or in a '{fonts_dir}' subdirectory."
+         #   logger.error(error_message)
+          #  raise FileNotFoundError(error_message)
 
         pdf = FPDF()
         logger.info("[PDF INIT] FPDF initialized.") # Log after initialization
-        try:
-            pdf.add_font('DejaVu', '', font_path if os.path.exists(font_path) else os.path.join(fonts_dir, font_path))
-            logger.info("[PDF FONT] DejaVu regular added.") # Log after adding font
-        except Exception as e:
-            logger.error(f"🚨 [PDF ERROR] Error adding regular font: {e}", exc_info=True)
-            raise
+      #  try:
+       #     pdf.add_font('DejaVu', '', font_path if os.path.exists(font_path) else os.path.join(fonts_dir, font_path))
+        #    logger.info("[PDF FONT] DejaVu regular added.") # Log after adding font
+        #except Exception as e:
+         #   logger.error(f"🚨 [PDF ERROR] Error adding regular font: {e}", exc_info=True)
+          #  raise
 
-        try:
-            pdf.add_font('DejaVu', 'B', font_path_bold if os.path.exists(font_path_bold) else os.path.join(fonts_dir, font_path_bold))
-            logger.info("[PDF FONT] DejaVu bold added.") # Log after adding font
-        except Exception as e:
-            logger.error(f"🚨 [PDF ERROR] Error adding bold font: {e}", exc_info=True)
-            raise
+        #try:
+         #   pdf.add_font('DejaVu', 'B', font_path_bold if os.path.exists(font_path_bold) else os.path.join(fonts_dir, font_path_bold))
+          #  logger.info("[PDF FONT] DejaVu bold added.") # Log after adding font
+       # except Exception as e:
+        #    logger.error(f"🚨 [PDF ERROR] Error adding bold font: {e}", exc_info=True)
+         #   raise
 
         pdf.add_page()
         logger.info("[PDF PAGE] Page added.") # Log after adding page
@@ -252,7 +252,7 @@ def generate_pdf_report(file_name, json_data):
             pdf.ln(3)
 
         pdf.ln(10)
-        pdf.set_font("DejaVu", '', 9)
+        pdf.set_font("Arial", '', 9)
         pdf.set_text_color(128, 128, 128)
         pdf.cell(w=0, h=10, text=f"Report generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} using Gemini AI", align='C', new_x="LMARGIN", new_y="NEXT")
         safe_file_stem = re.sub(r'[\\/*?:"<>|]', "_", Path(file_name).stem)
