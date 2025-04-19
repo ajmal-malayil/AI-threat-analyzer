@@ -178,6 +178,7 @@ def generate_pdf_report(file_name, json_data):
     try:
         doc = SimpleDocTemplate(output_path, pagesize=letter)
         styles = getSampleStyleSheet()
+        logger.info(f"Available ReportLab Styles: {styles.keys()}")
         style_normal = styles['Normal']
         style_bold = styles['Bold']
 
