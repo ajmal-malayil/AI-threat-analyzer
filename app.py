@@ -160,6 +160,20 @@ def parse_json_response(response_text):
         error_pos_context = json_str[max(0, e.pos-20):min(len(json_str), e.pos+20)]
         print(f"🚨 JSON Decode Error: {e.msg} near '{error_pos_context}'."); raise json.JSONDecodeError(f"Failed to decode JSON: {e.msg} near '{error_pos_context}'", json_str, e.pos) from e
 
+def test_pdf_generation():
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+    pdf.cell(200, 10, txt="This is a test PDF from Render.", ln=1, align="C")
+    output_path = os.path.join(REPORTS_DIR, "test_render_pdf.pdf")
+    pdf.output(output_path, "F")
+    return "Test PDF generated (hopefully!) Check your Render file system."
+
+with gr.Blocks() as demo:
+    test_button = gr.Button("Generate Test PDF")
+    test_output = gr.Textbox()
+    test_button.click(test_pdf_generation, outputs=test_output)
+
 def generate_pdf_report(file_name, json_data):
     """Generate a PDF report."""
     print("🐞 [PDF START] --- ENTERING generate_pdf_report FUNCTION ---") # ADD THIS LINE
