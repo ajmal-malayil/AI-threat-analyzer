@@ -154,40 +154,89 @@ def parse_json_response(response_text):
 def generate_pdf_report(file_name, json_data):
     """Generate a PDF report."""
     pdf = None; output_path = None
+    font_path = 'DejaVuSansCondensed.ttf'; font_path_bold = 'DejaVuSansCondensed-Bold.ttf'
+    print(f"🐞 [PDF START] Starting PDF generation for: {file_name}") # Explicit start log
     try:
-        pdf = FPDF(); font_path = 'DejaVuSansCondensed.ttf'; font_path_bold = 'DejaVuSansCondensed-Bold.ttf'
-        if not os.path.exists(font_path) or not os.path.exists(font_path_bold): raise FileNotFoundError(f"Font files not found. Place '{font_path}' and '{font_path_bold}' alongside app.py.")
-        pdf.add_font('DejaVu', '', font_path); pdf.add_font('DejaVu', 'B', font_path_bold)
-        pdf.add_page(); pdf.set_margins(15, 15, 15); pdf.set_auto_page_break(auto=True, margin=15)
-        pdf.set_font("DejaVu", 'B', 16); pdf.cell(w=0, h=10, text="Cybersecurity Threat Analysis Report", align='C', new_x="LMARGIN", new_y="NEXT")
-        pdf.set_font("DejaVu", '', 11); safe_display_name = file_name.encode('latin-1', 'replace').decode('latin-1'); pdf.cell(w=0, h=8, text=f"Log File Analyzed: {safe_display_name}", align='C', new_x="LMARGIN", new_y="NEXT")
-        pdf.ln(8); pdf.set_font("DejaVu", 'B', 13); pdf.cell(w=0, h=8, text="Analysis Summary", new_x="LMARGIN", new_y="NEXT")
-        pdf.line(15, pdf.get_y(), 195, pdf.get_y()); pdf.ln(4)
+        print(f"🐞 [PDF CHECK] Font path: {font_path}, exists: {os.path.exists(font_path)}")
+        print(f"🐞 [PDF CHECK] Font path bold: {font_path_bold}, exists: {os.path.exists(font_path_bold)}")
+        if not os.path.exists(font_path) or not os.path.exists(font_path_bold):
+            error_message = f"🚨 [PDF ERROR] Font files not found. Place '{font_path}' and '{font_path_bold}' alongside app.py."
+            print(error_message)
+            raise FileNotFoundError(error_message)
+
+        pdf = FPDF()
+        print("🐞 [PDF INIT] FPDF initialized.") # Log after initialization
+        pdf.add_font('DejaVu', '', font_path)
+        print("🐞 [PDF FONT] DejaVu regular added.") # Log after adding font
+        pdf.add_font('DejaVu', 'B', font_path_bold)
+        print("🐞 [PDF FONT] DejaVu bold added.") # Log after adding font
+        pdf.add_page()
+        print("🐞 [PDF PAGE] Page added.") # Log after adding page
+        pdf.set_margins(15, 15, 15)
+        pdf.set_auto_page_break(auto=True, margin=15)
+        pdf.set_font("DejaVu", 'B', 16)
+        pdf.cell(w=0, h=10, text="Cybersecurity Threat Analysis Report", align='C', new_x="LMARGIN", new_y="NEXT")
+        pdf.set_font("DejaVu", '', 11)
+        safe_display_name = html.escape(file_name.encode('latin-1', 'replace').decode('latin-1')) # Ensure html is imported
+        pdf.cell(w=0, h=8, text=f"Log File Analyzed: {safe_display_name}", align='C', new_x="LMARGIN", new_y="NEXT")
+        pdf.ln(8)
+        pdf.set_font("DejaVu", 'B', 13)
+        pdf.cell(w=0, h=8, text="Analysis Summary", new_x="LMARGIN", new_y="NEXT")
+        pdf.line(15, pdf.get_y(), 195, pdf.get_y())
+        pdf.ln(4)
         report_fields = {"Threat Level": json_data.get("threat_level", "N/A"), "Risk Score": str(json_data.get("risk_score", "N/A")), "Detected Threat / Event": json_data.get("detected_threat_type", "N/A"), "Affected System / Entity": json_data.get("affected_system", "N/A"), "Event Summary": json_data.get("summary", "N/A"), "MITRE ATT&CK Mapping": json_data.get("mitre_mapping", []), "Recommended Actions": json_data.get("recommended_actions", [])}
-        field_label_width = 60; value_start_x = 15 + field_label_width + 2
+        field_label_width = 60
+        value_start_x = 15 + field_label_width + 2
         for key, value in report_fields.items():
-            current_y = pdf.get_y(); pdf.set_font("DejaVu", 'B', 11); pdf.cell(w=field_label_width, h=7, text=f"{key}:")
-            pdf.set_font("DejaVu", '', 11); pdf.set_xy(value_start_x, current_y); available_width = pdf.w - value_start_x - pdf.r_margin
+            current_y = pdf.get_y()
+            pdf.set_font("DejaVu", 'B', 11)
+            pdf.cell(w=field_label_width, h=7, text=f"{key}:")
+            pdf.set_font("DejaVu", '', 11)
+            pdf.set_xy(value_start_x, current_y)
+            available_width = pdf.w - value_start_x - pdf.r_margin
             if isinstance(value, list):
                 if value:
                     first_item = True
                     for item in value:
-                        if not first_item: pdf.set_x(value_start_x)
+                        if not first_item:
+                            pdf.set_x(value_start_x)
                         pdf.multi_cell(w=available_width, h=7, text=f"• {str(item)}")
                         first_item = False
                     pdf.set_x(15)
-                else: pdf.multi_cell(w=available_width, h=7, text="N/A"); pdf.set_x(15)
-            else: pdf.multi_cell(w=available_width, h=7, text=str(value));
-            if pdf.get_y() < current_y + 7: pdf.set_y(current_y + 7)
+                else:
+                    pdf.multi_cell(w=available_width, h=7, text="N/A")
+                    pdf.set_x(15)
+            else:
+                pdf.multi_cell(w=available_width, h=7, text=str(value))
+            if pdf.get_y() < current_y + 7:
+                pdf.set_y(current_y + 7)
             pdf.ln(3)
-        pdf.ln(10); pdf.set_font("DejaVu", '', 9); pdf.set_text_color(128, 128, 128)
+
+        pdf.ln(10)
+        pdf.set_font("DejaVu", '', 9)
+        pdf.set_text_color(128, 128, 128)
         pdf.cell(w=0, h=10, text=f"Report generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} using Gemini AI", align='C', new_x="LMARGIN", new_y="NEXT")
-        safe_file_stem = re.sub(r'[\\/*?:"<>|]', "_", Path(file_name).stem); timestamp_suffix = datetime.now().strftime('%Y%m%d_%H%M%S')
-        output_filename = f"{safe_file_stem}_report_{timestamp_suffix}.pdf"; output_path = Path(REPORTS_DIR) / output_filename
-        os.makedirs(REPORTS_DIR, exist_ok=True); pdf.output(str(output_path))
-        if not output_path.exists(): raise FileNotFoundError(f"PDF file failed creation at {output_path}.")
-        print(f"✅ Successfully generated PDF report: {output_path}"); return str(output_path)
-    except Exception as e: print(f"🚨 Error generating PDF report: {e}"); return None
+        safe_file_stem = re.sub(r'[\\/*?:"<>|]', "_", Path(file_name).stem)
+        timestamp_suffix = datetime.now().strftime('%Y%m%d_%H%M%S')
+        output_filename = f"{safe_file_stem}_report_{timestamp_suffix}.pdf"
+        output_path = Path(REPORTS_DIR) / output_filename
+        print(f"🐞 [PDF SAVE] Attempting to create reports directory: {REPORTS_DIR}")
+        os.makedirs(REPORTS_DIR, exist_ok=True)
+        print(f"🐞 [PDF SAVE] Attempting to save PDF to: {output_path}")
+        pdf.output(str(output_path))
+        print(f"🐞 [PDF SAVE] PDF output command completed. Checking if file exists: {output_path.exists()}")
+        if not output_path.exists():
+            error_message = f"🚨 [PDF ERROR] Failed to create PDF file at {output_path}."
+            print(error_message)
+            raise FileNotFoundError(error_message)
+        print(f"✅ [PDF END] Successfully generated PDF report: {output_path}")
+        return str(output_path)
+    except FileNotFoundError as fnf_err:
+        print(f"🚨 [PDF ERROR] (FileNotFound): {fnf_err}")
+        return None
+    except Exception as e:
+        print(f"🚨 [PDF ERROR] (General Exception): {e}")
+        return None
 
 def safe_generate_content(model=None, prompt="", max_retries=3):
     """Safely generate content using Gemini AI, with API key rotation."""
