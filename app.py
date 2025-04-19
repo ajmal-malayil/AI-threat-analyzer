@@ -14,6 +14,11 @@ import re
 import time
 import html
 from dotenv import load_dotenv
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 # Load environment variables from .env
 load_dotenv()
@@ -160,23 +165,9 @@ def parse_json_response(response_text):
         error_pos_context = json_str[max(0, e.pos-20):min(len(json_str), e.pos+20)]
         print(f"🚨 JSON Decode Error: {e.msg} near '{error_pos_context}'."); raise json.JSONDecodeError(f"Failed to decode JSON: {e.msg} near '{error_pos_context}'", json_str, e.pos) from e
 
-def test_pdf_generation():
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("Arial", size=12)
-    pdf.cell(200, 10, txt="This is a test PDF from Render.", ln=1, align="C")
-    output_path = os.path.join(REPORTS_DIR, "test_render_pdf.pdf")
-    pdf.output(output_path, "F")
-    return "Test PDF generated (hopefully!) Check your Render file system."
-
-with gr.Blocks() as demo:
-    test_button = gr.Button("Generate Test PDF")
-    test_output = gr.Textbox()
-    test_button.click(test_pdf_generation, outputs=test_output)
-
 def generate_pdf_report(file_name, json_data):
     """Generate a PDF report."""
-    print("🐞 [PDF START] --- ENTERING generate_pdf_report FUNCTION ---") # ADD THIS LINE
+    logger.info("--- ENTERING generate_pdf_report FUNCTION ---")
     pdf = None; output_path = None
     # Define font file paths. Ensure these files are in the same directory as app.py
     # or in a 'fonts' subdirectory. Adjust as needed for your deployment.
@@ -184,11 +175,11 @@ def generate_pdf_report(file_name, json_data):
     font_path_bold = 'DejaVuSansCondensed-Bold.ttf'
     fonts_dir = 'fonts' # Optional subdirectory
 
-    print(f"🐞 [PDF START] Starting PDF generation for: {file_name}") # Explicit start log
+    logger.info(f"[PDF START] Starting PDF generation for: {file_name}") # Explicit start log
 
     def check_font_path(path):
         exists = os.path.exists(path)
-        print(f"🐞 [PDF CHECK] Font path: {path}, exists: {exists}")
+        logger.info(f"[PDF CHECK] Font path: {path}, exists: {exists}")
         return exists
 
     try:
@@ -197,27 +188,27 @@ def generate_pdf_report(file_name, json_data):
 
         if not found_regular or not found_bold:
             error_message = f"🚨 [PDF ERROR] Font files not found. Ensure '{font_path}' and '{font_path_bold}' are alongside app.py or in a '{fonts_dir}' subdirectory."
-            print(error_message)
+            logger.error(error_message)
             raise FileNotFoundError(error_message)
 
         pdf = FPDF()
-        print("🐞 [PDF INIT] FPDF initialized.") # Log after initialization
+        logger.info("[PDF INIT] FPDF initialized.") # Log after initialization
         try:
             pdf.add_font('DejaVu', '', font_path if os.path.exists(font_path) else os.path.join(fonts_dir, font_path))
-            print("🐞 [PDF FONT] DejaVu regular added.") # Log after adding font
+            logger.info("[PDF FONT] DejaVu regular added.") # Log after adding font
         except Exception as e:
-            print(f"🚨 [PDF ERROR] Error adding regular font: {e}")
+            logger.error(f"🚨 [PDF ERROR] Error adding regular font: {e}", exc_info=True)
             raise
 
         try:
             pdf.add_font('DejaVu', 'B', font_path_bold if os.path.exists(font_path_bold) else os.path.join(fonts_dir, font_path_bold))
-            print("🐞 [PDF FONT] DejaVu bold added.") # Log after adding font
+            logger.info("[PDF FONT] DejaVu bold added.") # Log after adding font
         except Exception as e:
-            print(f"🚨 [PDF ERROR] Error adding bold font: {e}")
+            logger.error(f"🚨 [PDF ERROR] Error adding bold font: {e}", exc_info=True)
             raise
 
         pdf.add_page()
-        print("🐞 [PDF PAGE] Page added.") # Log after adding page
+        logger.info("[PDF PAGE] Page added.") # Log after adding page
         pdf.set_margins(15, 15, 15)
         pdf.set_auto_page_break(auto=True, margin=15)
         pdf.set_font("DejaVu", 'B', 16)
@@ -269,36 +260,33 @@ def generate_pdf_report(file_name, json_data):
         output_filename = f"{safe_file_stem}_report_{timestamp_suffix}.pdf"
         output_path = Path(REPORTS_DIR) / output_filename
 
-        print(f"🐞 [PDF SAVE] Attempting to create reports directory: {REPORTS_DIR}")
+        logger.info(f"[PDF SAVE] Attempting to create reports directory: {REPORTS_DIR}")
         try:
             os.makedirs(REPORTS_DIR, exist_ok=True)
-            print(f"🐞 [PDF SAVE] Directory check/create successful for: {REPORTS_DIR}")
+            logger.info(f"[PDF SAVE] Directory check/create successful for: {REPORTS_DIR}")
         except Exception as mkdir_err:
-            print(f"🚨 [PDF ERROR] Failed to create directory {REPORTS_DIR}: {mkdir_err}")
+            logger.error(f"🚨 [PDF ERROR] Failed to create directory {REPORTS_DIR}: {mkdir_err}", exc_info=True)
             return None # Exit if directory fails
 
-        print(f"🐞 [PDF SAVE] Attempting to save PDF to: {output_path}")
+        logger.info(f"[PDF SAVE] Attempting to save PDF to: {output_path}")
         try:
             pdf.output(str(output_path))
-            print(f"🐞 [PDF SAVE] PDF output command completed. Checking if file exists: {output_path.exists()}")
+            logger.info(f"[PDF SAVE] PDF output command completed. Checking if file exists: {output_path.exists()}")
             if not output_path.exists():
                 error_message = f"🚨 [PDF ERROR] Failed to create PDF file at {output_path} after pdf.output() call."
-                print(error_message)
+                logger.error(error_message)
                 raise FileNotFoundError(error_message)
         except Exception as pdf_save_err:
-            print(f"🚨 [PDF ERROR] pdf.output() failed: {pdf_save_err}")
+            logger.error(f"🚨 [PDF ERROR] pdf.output() failed: {pdf_save_err}", exc_info=True)
             return None # Exit if saving fails
 
-        print(f"✅ [PDF END] Successfully generated PDF report: {output_path}")
+        logger.info(f"✅ [PDF END] Successfully generated PDF report: {output_path}")
         return str(output_path)
     except FileNotFoundError as fnf_err: # Specifically catch font or post-save check errors
-        print(f"🚨 [PDF ERROR] (FileNotFound): {fnf_err}")
+        logger.error(f"🚨 [PDF ERROR] (FileNotFound): {fnf_err}", exc_info=True)
         return None
     except Exception as e:
-        print(f"🚨 [PDF ERROR] (General Exception during PDF generation): {e}")
-        # Optionally add more detailed traceback here if needed:
-        # import traceback
-        # print(traceback.format_exc())
+        logger.error(f"🚨 [PDF ERROR] (General Exception during PDF generation): {e}", exc_info=True)
         return None
 
 def safe_generate_content(model=None, prompt="", max_retries=3):
