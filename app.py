@@ -438,7 +438,7 @@ def analyze_multiple_files(files, selected_model, progress=gr.Progress(track_tqd
             print(f"🚨 Error creating or cleaning up ZIP: {e}")
             summary_log += f"\n🚨 Error creating or cleaning up ZIP: {e}\n"
             # Decide if we should nullify zip_path if zipping fails critically
-            zip_path = None # Set zip_path to None if zipping fails
+            zip_path = None # Set zip_path to None if zipping failed
 
 
     # *** Start Patched Section: Revised Final Status Logic ***
@@ -535,88 +535,48 @@ def clear_outputs():
 # Gradio Interface Setup
 # --------------------------------------------------------------------------
 css = """
-:root {
-    --primary-color: #28a745; /* A professional green */
-    --secondary-color: #6c757d; /* Grey */
-    --background-color: #f8f9fa;
-    --text-color: #495057;
-    --header-bg-color: #343a40;
-}
-
-body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    margin: 0;
-    background-color: var(--background-color);
-    color: var(--text-color);
-}
-
-#top-bar {
-    background-color: var(--header-bg-color);
-    color: white;
-    padding: 15px 25px;
-    border-bottom: 1px solid #dee2e6;
-}
-
-.button-primary {
-    background-color: var(--primary-color) !important;
-    color: white !important;
-    border: none !important;
-    border-radius: 8px !important;
-    padding: 12px 24px !important;
-    cursor: pointer !important;
-    font-size: 1.1em !important;
-    transition: background-color 0.3s ease !important;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.button-primary:hover {
-    background-color: #1e7e34 !important;
-}
-
-.gradio-file {
-    border: 2px dashed #ced4da;
-    border-radius: 8px;
-    padding: 25px;
-    margin-bottom: 20px;
-    background-color: white;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-}
-
-.results-box {
-    background-color: #fff;
-    padding: 20px;
-    border-radius: 8px;
-    margin-bottom: 20px;
-    border: 1px solid #e0e0e0;
-}
-
-.gradio-accordion {
-    border: 1px solid #ced4da;
-    border-radius: 8px;
-    margin-top: 15px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-}
-
-.threat-box {
-    padding: 15px;
-    margin-bottom: 15px;
-    border-radius: 8px;
-    border-left: 5px solid var(--primary-color);
-    background-color: #f9fafa;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
-}
-
-.footer {
-    text-align: center;
-    padding: 25px;
-    margin-top: 30px;
-    color: #6c757d;
-    font-size: 0.9em;
-    border-top: 1px solid #dee2e6;
-    background-color: #f8f9fa;
-}
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background-color: #f8f9fa; }
+#top-bar { background-color: #343a40; color: white; padding: 10px 25px; }
+#top-bar-content { display: flex; justify-content: space-between; align-items: center; max-width: 1200px; margin: auto; }
+#top-bar h1 { font-size: 1.5em; margin: 0; }
+#top-bar a { color: #adb5bd; text-decoration: none; margin-left: 15px; }
+#top-bar a:hover { color: white; }
+.main-content { max-width: 1000px; margin: 20px auto; padding: 0 15px; }
+.upload-box, .results-box, .section-header { margin-bottom: 20px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.gradio-file { border: 2px dashed #ced4da; border-radius: 5px; padding: 15px; }
+.button-primary { /* styles for primary button if needed */ }
+.status-text > label > span { font-weight: bold; }
+.status-text textarea { font-size: 1.1em; font-weight: 500; }
+.gradio-accordion { border: 1px solid #dee2e6; border-radius: 5px; margin-top: 15px; }
+.output-html h3 { margin-top: 0px; margin-bottom: 10px; color: #495057; border-bottom: 1px solid #e9ecef; padding-bottom: 5px; }
+/* Style for Processing Log Pre */
+.processing-log { background-color: #f1f3f5; padding: 10px; border-radius: 4px; font-family: 'Consolas', 'Monaco', monospace; white-space: pre-wrap; word-wrap: break-word; margin-bottom: 10px; color: #495057; font-size: 0.9em; max-height: 400px; overflow-y: auto; border: 1px solid #ced4da; }
+.results-container { margin-top: 15px; }
+.threat-box { padding: 15px; margin-bottom: 15px; border-radius: 5px; border-left: 5px solid #6c757d; background-color: #ffffff; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+.threat-box h4 { margin-top: 0; margin-bottom: 10px; font-size: 1.1em; display: flex; align-items: center; color: #343a40;}
+.threat-box h4 > span.status-text { font-weight: bold; margin-left: auto; font-size: 0.95em; padding: 3px 8px; border-radius: 4px; }
+:root { --success-border-color: #28a745; --success-bg-color: #e9f7ec; --success-text-color: #28a745; --warning-border-color: #ffc107; --warning-bg-color: #fff8e1; --warning-text-color: #b98900; --danger-border-color: #dc3545; --danger-bg-color: #f8d7da; --danger-text-color: #dc3545; }
+.status-success { border-left-color: var(--success-border-color) !important; background-color: var(--success-bg-color); }
+.status-success h4 > span.status-text { background-color: var(--success-text-color); color: white; }
+.status-warning { border-left-color: var(--warning-border-color) !important; background-color: var(--warning-bg-color); }
+.status-warning h4 > span.status-text { background-color: var(--warning-text-color); color: white; }
+.status-danger { border-left-color: var(--danger-border-color) !important; background-color: var(--danger-bg-color); }
+.status-danger h4 > span.status-text { background-color: var(--danger-text-color); color: white; }
+/* Style for JSON output within threat box */
+.json-output { border: 1px solid #e0e0e0; background-color: #fdfdfd; color: #333; padding: 10px; border-radius: 4px; font-family: 'Consolas', 'Monaco', monospace; white-space: pre-wrap; word-wrap: break-word; font-size: 0.9em; margin-top: 10px; }
+/* Style for error/warning details within threat box */
+.error-details, .warning-details { padding: 10px; border-radius: 4px; font-family: 'Consolas', 'Monaco', monospace; white-space: pre-wrap; word-wrap: break-word; font-size: 0.9em; margin-top: 10px; }
+.error-details { color: var(--danger-text-color); background-color: #fef4f5; border: 1px solid var(--danger-border-color);}
+.warning-details { color: var(--warning-text-color); background-color: #fffbf0; border: 1px solid var(--warning-border-color); }
+#chat-button { position: fixed; bottom: 25px; right: 25px; z-index: 1001; width: 55px; height: 55px; border-radius: 50%; background-color: var(--primary-500); color: white; font-size: 1.8em; border: none; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center; transition: background-color 0.2s ease; }
+#chat-button:hover { background-color: var(--primary-600); }
+#chat-container { visibility: hidden; opacity: 0; position: fixed; bottom: 90px; right: 25px; width: 380px; max-width: 90vw; z-index: 1000; background: white; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); transition: opacity 0.3s ease, visibility 0.3s ease; overflow: hidden; }
+#chat-container.visible { visibility: visible; opacity: 1; }
+.footer { text-align: center; padding: 20px; margin-top: 30px; color: #6c757d; font-size: 0.9em; border-top: 1px solid #dee2e6; }
+.footer b { color: #495057; }
 """
 
+# Define components within Blocks context BEFORE using them in handlers
 with gr.Blocks(css=css, theme=gr.themes.Soft()) as demo:
     with gr.Row(elem_id="top-bar"):
         gr.HTML("""
@@ -705,7 +665,7 @@ with gr.Blocks(css=css, theme=gr.themes.Soft()) as demo:
 
     gr.HTML("""
     <div class='footer'>
-        🛡️ Enterprise Threat Analyzer Pro | Developed by <b>Ajmal Malayil</b> | Powered by GENAI
+        🛡️ Enterprise Threat Analyzer Pro | Developed by <b>Ajmal Malayil</b> | Powered by Gemini AI
     </div>
     """) # Placeholder developer name
 
