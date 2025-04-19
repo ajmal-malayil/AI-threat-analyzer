@@ -13,6 +13,7 @@ import zipfile
 from datetime import datetime
 import re
 import time
+import html
 from dotenv import load_dotenv
 
 # Load environment variables from .env
