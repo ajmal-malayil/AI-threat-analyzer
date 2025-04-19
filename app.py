@@ -282,9 +282,9 @@ def generate_pdf_report(file_name, json_data):
 
         logger.info(f"✅ [PDF END] Successfully generated PDF report: {output_path}")
         return str(output_path)
-    except FileNotFoundError as fnf_err: # Specifically catch font or post-save check errors
-        logger.error(f"🚨 [PDF ERROR] (FileNotFound): {fnf_err}", exc_info=True)
-        return None
+   # except FileNotFoundError as fnf_err: # Specifically catch font or post-save check errors
+    #    logger.error(f"🚨 [PDF ERROR] (FileNotFound): {fnf_err}", exc_info=True)
+     #   return None
     except Exception as e:
         logger.error(f"🚨 [PDF ERROR] (General Exception during PDF generation): {e}", exc_info=True)
         return None
