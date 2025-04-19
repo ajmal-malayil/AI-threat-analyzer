@@ -178,15 +178,18 @@ def generate_pdf_report(file_name, json_data):
     try:
         doc = SimpleDocTemplate(output_path, pagesize=letter)
         styles = getSampleStyleSheet()
-        logger.info(f"Available ReportLab Styles: {styles.keys()}")
+
+        available_styles = [style for style in styles.byName]
+        logger.info(f"Available ReportLab Styles: {available_styles}")
+
         style_normal = styles['Normal']
-        style_bold = styles['Bold']
+        style_heading2 = styles['Heading2'] # Try 'Heading2' or 'h2' for bold
 
         story = []
 
         story.append(Paragraph("Cybersecurity Threat Analysis Report", styles['h1']))
         story.append(Spacer(1, 0.2 * inch))
-        story.append(Paragraph(f"Log File Analyzed: {html.escape(file_name)}", style_bold))
+        story.append(Paragraph(f"Log File Analyzed: {html.escape(file_name)}", style_heading2))
         story.append(Spacer(1, 0.2 * inch))
         story.append(Paragraph("Analysis Summary", styles['h2']))
         story.append(Spacer(1, 0.1 * inch))
@@ -202,7 +205,7 @@ def generate_pdf_report(file_name, json_data):
         ]
 
         for key, value in report_data:
-            story.append(Paragraph(f"{key}: ", style_bold) + Paragraph(f"{value}", style_normal))
+            story.append(Paragraph(f"{key}: ", style_heading2) + Paragraph(f"{value}", style_normal))
             story.append(Spacer(1, 0.05 * inch))
 
         story.append(Spacer(1, 0.5 * inch))
