@@ -347,6 +347,7 @@ def analyze_multiple_files(files, selected_model, progress=gr.Progress(track_tqd
                 json_data = parse_json_response(raw_text); file_result["json_data"] = json_data
                 print(f"{current_file_log_prefix} Successfully parsed JSON.")
                 summary_log += "Successfully parsed JSON response.\n" # Add to log
+                print("🐞 About to call generate_pdf_report")  # ADD THIS LINE
                 pdf_file_path = generate_pdf_report(file_name_display, json_data)
                 if pdf_file_path:
                     pdf_files_generated.append(pdf_file_path); file_result["status"] = "✅ Success"
