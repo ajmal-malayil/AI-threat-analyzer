@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import gradio as gr
 import os
-import fitz  # PyMuPDF
+import fitz
 import pandas as pd
 from fpdf import FPDF
 from pathlib import Path
@@ -12,7 +12,7 @@ import zipfile
 from datetime import datetime
 import re
 import time
-import html  # Ensure html is imported
+import html
 from dotenv import load_dotenv
 
 # Load environment variables from .env
@@ -22,8 +22,10 @@ load_dotenv()
 try:
     print(f"Current working directory: {os.getcwd()}")
     print(f"Files in CWD: {os.listdir('.')}")
+    print(f"Contents of 'analyzed_reports': {os.listdir('analyzed_reports') if os.path.exists('analyzed_reports') else 'Directory not found'}")
+    print(f"Contents of 'fonts': {os.listdir('fonts') if os.path.exists('fonts') else 'Directory not found'}")
 except Exception as e:
-    print(f"Could not list CWD contents: {e}")
+    print(f"Could not list directory contents: {e}")
 
 
 # 🔐 Load API keys from .env
@@ -44,7 +46,7 @@ except Exception as e:
     sys.exit(1)
 
 REPORTS_DIR = "analyzed_reports"
-os.makedirs(REPORTS_DIR, exist_ok=True) # Create reports dir at startup too
+os.makedirs(REPORTS_DIR, exist_ok=True)
 
 class AIProvider(Enum):
     GEMINI = "Gemini"
@@ -161,22 +163,44 @@ def parse_json_response(response_text):
 def generate_pdf_report(file_name, json_data):
     """Generate a PDF report."""
     pdf = None; output_path = None
-    font_path = 'DejaVuSansCondensed.ttf'; font_path_bold = 'DejaVuSansCondensed-Bold.ttf'
+    # Define font file paths. Ensure these files are in the same directory as app.py
+    # or in a 'fonts' subdirectory. Adjust as needed for your deployment.
+    font_path = 'DejaVuSansCondensed.ttf'
+    font_path_bold = 'DejaVuSansCondensed-Bold.ttf'
+    fonts_dir = 'fonts' # Optional subdirectory
+
     print(f"🐞 [PDF START] Starting PDF generation for: {file_name}") # Explicit start log
+
+    def check_font_path(path):
+        exists = os.path.exists(path)
+        print(f"🐞 [PDF CHECK] Font path: {path}, exists: {exists}")
+        return exists
+
     try:
-        print(f"🐞 [PDF CHECK] Font path: {font_path}, exists: {os.path.exists(font_path)}")
-        print(f"🐞 [PDF CHECK] Font path bold: {font_path_bold}, exists: {os.path.exists(font_path_bold)}")
-        if not os.path.exists(font_path) or not os.path.exists(font_path_bold):
-            error_message = f"🚨 [PDF ERROR] Font files not found. Place '{font_path}' and '{font_path_bold}' alongside app.py or ensure they are in the correct deployment path."
+        found_regular = check_font_path(font_path) or check_font_path(os.path.join(fonts_dir, font_path))
+        found_bold = check_font_path(font_path_bold) or check_font_path(os.path.join(fonts_dir, font_path_bold))
+
+        if not found_regular or not found_bold:
+            error_message = f"🚨 [PDF ERROR] Font files not found. Ensure '{font_path}' and '{font_path_bold}' are alongside app.py or in a '{fonts_dir}' subdirectory."
             print(error_message)
             raise FileNotFoundError(error_message)
 
         pdf = FPDF()
         print("🐞 [PDF INIT] FPDF initialized.") # Log after initialization
-        pdf.add_font('DejaVu', '', font_path)
-        print("🐞 [PDF FONT] DejaVu regular added.") # Log after adding font
-        pdf.add_font('DejaVu', 'B', font_path_bold)
-        print("🐞 [PDF FONT] DejaVu bold added.") # Log after adding font
+        try:
+            pdf.add_font('DejaVu', '', font_path if os.path.exists(font_path) else os.path.join(fonts_dir, font_path))
+            print("🐞 [PDF FONT] DejaVu regular added.") # Log after adding font
+        except Exception as e:
+            print(f"🚨 [PDF ERROR] Error adding regular font: {e}")
+            raise
+
+        try:
+            pdf.add_font('DejaVu', 'B', font_path_bold if os.path.exists(font_path_bold) else os.path.join(fonts_dir, font_path_bold))
+            print("🐞 [PDF FONT] DejaVu bold added.") # Log after adding font
+        except Exception as e:
+            print(f"🚨 [PDF ERROR] Error adding bold font: {e}")
+            raise
+
         pdf.add_page()
         print("🐞 [PDF PAGE] Page added.") # Log after adding page
         pdf.set_margins(15, 15, 15)
@@ -207,25 +231,19 @@ def generate_pdf_report(file_name, json_data):
                     for item in value:
                         if not first_item:
                             pdf.set_x(value_start_x)
-                        # Ensure item is a string before encoding/decoding for safety
                         safe_item = str(item).encode('latin-1', 'replace').decode('latin-1')
                         pdf.multi_cell(w=available_width, h=7, text=f"• {safe_item}")
                         first_item = False
-                    # pdf.set_x(15) # This might cause issues if multi_cell wraps, manage position after loop
                 else:
                     pdf.multi_cell(w=available_width, h=7, text="N/A")
-                    # pdf.set_x(15) # Manage position after call
             else:
-                # Ensure value is a string before encoding/decoding
                 safe_value = str(value).encode('latin-1', 'replace').decode('latin-1')
                 pdf.multi_cell(w=available_width, h=7, text=safe_value)
 
-            # Reset X position for the next field label
             pdf.set_x(15)
-            # Ensure Y position advances correctly, especially after multi_cell
-            if pdf.get_y() < current_y + 7: # Handle case where multi_cell didn't add height
-                 pdf.set_y(current_y + 7)
-            pdf.ln(3) # Add spacing between fields
+            if pdf.get_y() < current_y + 7:
+                pdf.set_y(current_y + 7)
+            pdf.ln(3)
 
         pdf.ln(10)
         pdf.set_font("DejaVu", '', 9)
@@ -236,7 +254,6 @@ def generate_pdf_report(file_name, json_data):
         output_filename = f"{safe_file_stem}_report_{timestamp_suffix}.pdf"
         output_path = Path(REPORTS_DIR) / output_filename
 
-        # *** Start Patched Section: Directory and Save Logging ***
         print(f"🐞 [PDF SAVE] Attempting to create reports directory: {REPORTS_DIR}")
         try:
             os.makedirs(REPORTS_DIR, exist_ok=True)
@@ -254,9 +271,8 @@ def generate_pdf_report(file_name, json_data):
                 print(error_message)
                 raise FileNotFoundError(error_message)
         except Exception as pdf_save_err:
-             print(f"🚨 [PDF ERROR] pdf.output() failed: {pdf_save_err}")
-             return None # Exit if saving fails
-        # *** End Patched Section ***
+            print(f"🚨 [PDF ERROR] pdf.output() failed: {pdf_save_err}")
+            return None # Exit if saving fails
 
         print(f"✅ [PDF END] Successfully generated PDF report: {output_path}")
         return str(output_path)
@@ -318,8 +334,8 @@ def safe_generate_content(model=None, prompt="", max_retries=3):
                     safety_ratings = response.prompt_feedback.safety_ratings if response.prompt_feedback else []
                     block_reason = f"Finish Reason: {finish_reason}, Safety Ratings: {safety_ratings}"
                 except Exception as feedback_err:
-                     print(f"Error retrieving block reason details: {feedback_err}")
-                     pass # Use default block_reason
+                    print(f"Error retrieving block reason details: {feedback_err}")
+                    pass # Use default block_reason
                 raise Exception(f"🛑 Content generation blocked. Reason: {block_reason}")
 
             if hasattr(response, 'text') and response.text:
@@ -343,7 +359,7 @@ def safe_generate_content(model=None, prompt="", max_retries=3):
             is_safety_block = "blocked" in error_str # Broader check for safety blocks
 
             if is_safety_block:
-                raise e  # Don't retry safety blocks, raise immediately
+                raise e # Don't retry safety blocks, raise immediately
             elif is_quota_error or is_auth_error:
                 # Rotate to next key
                 current_key_index = (current_key_index + 1) % len(API_KEYS)
@@ -353,9 +369,9 @@ def safe_generate_content(model=None, prompt="", max_retries=3):
                 time.sleep(2) # Brief pause before retrying with new key
                 continue # Continue to next attempt in the loop
             else: # Other errors (network, internal server, etc.)
-                 # Could implement more specific retry logic here if needed
-                 # For now, re-raise if not quota/auth/safety
-                 raise e # Re-raise unexpected errors
+                # Could implement more specific retry logic here if needed
+                # For now, re-raise if not quota/auth/safety
+                raise e # Re-raise unexpected errors
 
     raise Exception(f"❌ Failed after {max_retries} attempts with {len(API_KEYS)} key(s).")
 
@@ -364,14 +380,14 @@ def cleanup_old_reports():
     now = time.time(); cutoff = now - (24 * 60 * 60); count = 0
     print(f"🧹 Starting cleanup of old reports in '{REPORTS_DIR}'...")
     try:
-        if not os.path.isdir(REPORTS_DIR): print("   Info: Reports directory does not exist."); return
+        if not os.path.isdir(REPORTS_DIR): print("    Info: Reports directory does not exist."); return
         for filename in os.listdir(REPORTS_DIR):
             if filename.lower().endswith((".pdf", ".zip")):
                 file_path = os.path.join(REPORTS_DIR, filename)
                 try:
                     if os.path.isfile(file_path) and os.path.getmtime(file_path) < cutoff:
-                        os.remove(file_path); print(f"   - Deleted old report: {filename}"); count += 1
-                except Exception as e: print(f"   - ⚠️ Error processing/deleting {filename}: {e}")
+                        os.remove(file_path); print(f"    - Deleted old report: {filename}"); count += 1
+                except Exception as e: print(f"    - ⚠️ Error processing/deleting {filename}: {e}")
         if count > 0: print(f"🧹 Cleanup finished. Deleted {count} old report file(s).")
         else: print("🧹 No old report files found matching criteria for deletion.")
     except Exception as e: print(f"🚨 Error during cleanup: {e}")
@@ -409,7 +425,7 @@ def analyze_multiple_files(files, selected_model, progress=gr.Progress(track_tqd
         }
     # --- End Initial Checks ---
 
-    analysis_results = []; pdf_files_generated = []; # Removed error_count/success_count, will derive later
+    analysis_results = []; pdf_files_generated = [];
     # Initialize summary_log here
     summary_log = f"📊 Analysis started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} for {total_files} file(s)\n🤖 Model: {selected_model}\n⚠️ Reports auto-delete after 24h.\n\n"
 
@@ -431,7 +447,7 @@ def analyze_multiple_files(files, selected_model, progress=gr.Progress(track_tqd
             analysis_results.append(file_result)
             print(f"{current_file_log_prefix} Failed extraction: {content}"); continue # Skip to next file
         else:
-             summary_log += f"Content extracted successfully (Length: {len(content)}).\n" # Add success to log
+            summary_log += f"Content extracted successfully (Length: {len(content)}).\n" # Add success to log
 
         prompt = build_prompt(content)
         summary_log += "Sending request to AI...\n" # Add to log
@@ -509,11 +525,11 @@ def analyze_multiple_files(files, selected_model, progress=gr.Progress(track_tqd
         final_status_message = f"❌ Analysis Failed ({duration}s) for all {num_total} files due to errors."
     elif num_success + num_pdf_failed == num_total and num_total > 0: # All files processed by AI at least
         if num_pdf_failed == 0:
-             final_status_message = f"✅ Analysis Complete ({duration}s). {num_success}/{num_total} succeeded. {zip_status_text}"
+            final_status_message = f"✅ Analysis Complete ({duration}s). {num_success}/{num_total} succeeded. {zip_status_text}"
         else:
-             final_status_message = f"⚠️ Analysis Complete ({duration}s). {num_success}/{num_total} fully succeeded, {num_pdf_failed} had PDF errors. {zip_status_text}"
+            final_status_message = f"⚠️ Analysis Complete ({duration}s). {num_success}/{num_total} fully succeeded, {num_pdf_failed} had PDF errors. {zip_status_text}"
     elif num_total > 0 : # Mixed results or other combinations
-         final_status_message = f"ℹ️ Analysis Partially Complete ({duration}s). {num_success} success, {num_pdf_failed} PDF fail, {num_errors} errors. {zip_status_text}"
+        final_status_message = f"ℹ️ Analysis Partially Complete ({duration}s). {num_success} success, {num_pdf_failed} PDF fail, {num_errors} errors. {zip_status_text}"
     else: # No files processed (should have been caught earlier, but as fallback)
         final_status_message = f"ℹ️ Analysis finished ({duration}s). No files processed."
     # *** End Patched Section ***
@@ -534,11 +550,11 @@ def analyze_multiple_files(files, selected_model, progress=gr.Progress(track_tqd
             file_results_html += f"<h4>📄 {escaped_filename} &nbsp;|&nbsp; <span class='status-text'>{escaped_status}</span></h4>" # Use &nbsp; for spacing
             # Display JSON pre for success, otherwise display details as paragraph
             if result.get("status") == "✅ Success":
-                 file_results_html += f"<pre class='json-output'>{escaped_details}</pre>" # Show JSON
+                file_results_html += f"<pre class='json-output'>{escaped_details}</pre>" # Show JSON
             elif result.get("details"):
-                 # Add specific class for errors/warnings if needed
-                 detail_class = "error-details" if "❌" in result["status"] else "warning-details"
-                 file_results_html += f"<p class='{detail_class}'>{escaped_details}</p>" # Show error/warning details
+                # Add specific class for errors/warnings if needed
+                detail_class = "error-details" if "❌" in result["status"] else "warning-details"
+                file_results_html += f"<p class='{detail_class}'>{escaped_details}</p>" # Show error/warning details
             else: file_results_html += "<p>No details provided.</p>" # Fallback
             file_results_html += "</div>"
         file_results_html += "</div>"
@@ -637,11 +653,11 @@ with gr.Blocks(css=css, theme=gr.themes.Soft()) as demo:
     with gr.Row(elem_id="top-bar"):
         gr.HTML("""
         <div id="top-bar-content">
-             <h1>🛡️ Enterprise Threat Analyzer Pro</h1>
-             <div>
-                 <a href='https://ajmalmalayil.pages.dev/' target='_blank'>🌐 Portfolio</a>
-                 <a href='https://wa.me/+971544566442' target='_blank'>💬 Contact</a>
-             </div>
+            <h1>🛡️ Enterprise Threat Analyzer Pro</h1>
+            <div>
+                <a href='https://ajmalmalayil.pages.dev/' target='_blank'>🌐 Portfolio</a>
+                <a href='https://wa.me/+971544566442' target='_blank'>💬 Contact</a>
+            </div>
         </div>
         """) # Placeholder links
 
@@ -651,7 +667,7 @@ with gr.Blocks(css=css, theme=gr.themes.Soft()) as demo:
         Upload log files (text, PDF, Excel) to identify potential threats, assess risks, and get recommended actions using Google's Gemini AI.
         """)
         gr.Markdown("<span style='color:var(--danger-text-color, #dc3545); font-weight:600;'>⚠️ Security & Privacy:</span> Reports are auto-deleted after 24 hours. Uploaded files aren't stored long-term.",
-                     elem_id="privacy-note")
+                    elem_id="privacy-note")
 
         with gr.Column(elem_classes="upload-box"):
             gr.Markdown("### 1. Upload Files & Configure")
@@ -674,14 +690,14 @@ with gr.Blocks(css=css, theme=gr.themes.Soft()) as demo:
 
         # --- Define Chat Components ---
         with gr.Column(elem_id="chat-container") as chat_section: # Initially hidden
-             chat_interface = gr.ChatInterface(
-                 fn=chatbot_reply,
-                 chatbot=gr.Chatbot(label="💬 Chat with LogBot", height=400, show_copy_button=True, avatar_images=(None, "https://img.icons8.com/color/48/bot.png")), # Ensure type is inferred or set if needed
-                 textbox=gr.Textbox(placeholder="Ask about the tool, results, terms...", container=False, scale=7),
-                 theme="soft",
-                 # Removed explicit type="messages" as Chatbot defines its structure
-                 # examples = ["Explain Threat Level", "What is MITRE?", "Why did PDF fail?", "How does it work?"] # Add examples if desired
-             )
+            chat_interface = gr.ChatInterface(
+                fn=chatbot_reply,
+                chatbot=gr.Chatbot(label="💬 Chat with LogBot", height=400, show_copy_button=True, avatar_images=(None, "https://img.icons8.com/color/48/bot.png")), # Ensure type is inferred or set if needed
+                textbox=gr.Textbox(placeholder="Ask about the tool, results, terms...", container=False, scale=7),
+                theme="soft",
+                # Removed explicit type="messages" as Chatbot defines its structure
+                # examples = ["Explain Threat Level", "What is MITRE?", "Why did PDF fail?", "How does it work?"] # Add examples if desired
+            )
         chat_btn = gr.Button("💬", elem_id="chat-button")
 
         # --- Define Event Handlers (AFTER components are defined) ---
@@ -706,12 +722,12 @@ with gr.Blocks(css=css, theme=gr.themes.Soft()) as demo:
         () => {
             const chatContainer = document.getElementById('chat-container');
             if (chatContainer) {
-                 chatContainer.classList.toggle('visible');
-                 // Optional: Focus the input when chat becomes visible
-                 if (chatContainer.classList.contains('visible')) {
-                      const chatInput = chatContainer.querySelector('textarea'); // Find the textarea input
-                      if(chatInput) chatInput.focus();
-                 }
+                    chatContainer.classList.toggle('visible');
+                    // Optional: Focus the input when chat becomes visible
+                    if (chatContainer.classList.contains('visible')) {
+                         const chatInput = chatContainer.querySelector('textarea'); // Find the textarea input
+                         if(chatInput) chatInput.focus();
+                    }
             }
             return []; // JS functions should return something, often an empty list for Gradio
         }
@@ -727,9 +743,9 @@ with gr.Blocks(css=css, theme=gr.themes.Soft()) as demo:
 
 # Launch the Gradio app
 if __name__ == "__main__":
-     # Schedule cleanup periodically (e.g., every hour) if desired, otherwise it only runs on clear.
-     # Note: Background scheduling needs libraries like 'schedule' and 'threading' and careful implementation.
-     # For simplicity, cleanup_old_reports() is called by clear_outputs().
+    # Schedule cleanup periodically (e.g., every hour) if desired, otherwise it only runs on clear.
+    # Note: Background scheduling needs libraries like 'schedule' and 'threading' and careful implementation.
+    # For simplicity, cleanup_old_reports() is called by clear_outputs().
 
-     print("Starting Gradio server...")
-     demo.launch(server_name="0.0.0.0", server_port=10000) # share=True for public link (use with caution)
+    print("Starting Gradio server...")
+    demo.launch(server_name="0.0.0.0", server_port=10000) # share=True for public link (use with caution)
