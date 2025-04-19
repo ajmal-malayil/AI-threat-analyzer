@@ -211,13 +211,13 @@ def generate_pdf_report(file_name, json_data):
         logger.info("[PDF PAGE] Page added.") # Log after adding page
         pdf.set_margins(15, 15, 15)
         pdf.set_auto_page_break(auto=True, margin=15)
-        pdf.set_font("DejaVu", 'B', 16)
+        pdf.set_font("Arial", 'B', 16)
         pdf.cell(w=0, h=10, text="Cybersecurity Threat Analysis Report", align='C', new_x="LMARGIN", new_y="NEXT")
-        pdf.set_font("DejaVu", '', 11)
+        pdf.set_font("Arial", '', 11)
         safe_display_name = html.escape(file_name.encode('latin-1', 'replace').decode('latin-1'))
         pdf.cell(w=0, h=8, text=f"Log File Analyzed: {safe_display_name}", align='C', new_x="LMARGIN", new_y="NEXT")
         pdf.ln(8)
-        pdf.set_font("DejaVu", 'B', 13)
+        pdf.set_font("Arial", 'B', 13)
         pdf.cell(w=0, h=8, text="Analysis Summary", new_x="LMARGIN", new_y="NEXT")
         pdf.line(15, pdf.get_y(), 195, pdf.get_y())
         pdf.ln(4)
@@ -226,9 +226,9 @@ def generate_pdf_report(file_name, json_data):
         value_start_x = 15 + field_label_width + 2
         for key, value in report_fields.items():
             current_y = pdf.get_y()
-            pdf.set_font("DejaVu", 'B', 11)
+            pdf.set_font("Arial", 'B', 11)
             pdf.cell(w=field_label_width, h=7, text=f"{key}:")
-            pdf.set_font("DejaVu", '', 11)
+            pdf.set_font("Arial", '', 11)
             pdf.set_xy(value_start_x, current_y)
             available_width = pdf.w - value_start_x - pdf.r_margin
             if isinstance(value, list):
