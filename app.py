@@ -509,20 +509,71 @@ def analyze_multiple_files(files, selected_model, progress=gr.Progress(track_tqd
 
 def chatbot_reply(message, history):
     """Generate chatbot reply."""
-    msg_lower = message.lower().strip(); reply = ""
+    msg_lower = message.lower().strip()
+    reply = ""
     print(f"Chatbot received: '{message}'")
-    if any(word in msg_lower for word in ["support", "contact"]): reply = "For support, please refer to the Contact link in the header or reach out to the developer (Ajmal Malayil)."
-    elif "mitre" in msg_lower or "att&ck" in msg_lower: reply = "MITRE ATT&CK® is a globally-accessible knowledge base of adversary tactics and techniques based on real-world observations. The report attempts to map findings to relevant technique IDs (e.g., T1059.001 for PowerShell execution)."
-    elif "threat level" in msg_lower: reply = "Threat Level indicates the assessed severity: INFO (Informational), LOW (Minor issue, monitor), MEDIUM (Potential threat, investigation recommended), HIGH (Likely threat, requires prompt attention), CRITICAL (Active compromise or severe vulnerability, immediate action required), N/A (Not Applicable or Undetermined)."
-    elif "risk score" in msg_lower: reply = "Risk Score is an estimated numerical representation (0-100) of the risk, considering the threat level and context. Higher scores indicate greater risk. It's 0 for INFO or N/A levels."
-    elif any(word in msg_lower for word in ["safe", "privacy", "store", "keep files"]): reply = "Uploaded files are processed in memory for analysis. Generated PDF/ZIP reports are stored temporarily in the 'analyzed_reports' directory and are automatically deleted after 24 hours by the cleanup routine. Original uploaded files are not stored long-term on the server after processing."
-    elif any(model.value.lower() in msg_lower for model in AIProvider if model != AIProvider.GEMINI): reply = f"Currently, only the {AIProvider.GEMINI.value} model is implemented and supported for analysis."
-    elif any(word in msg_lower for word in ["how", "work", "steps", "process"]): reply = "The process is: 1. You upload log files (PDF, Excel, text...). 2. The tool extracts text content. 3. The extracted text is sent to the Gemini AI with specific instructions to analyze for threats. 4. The AI returns a structured JSON analysis. 5. A PDF report is generated from the JSON data. 6. If multiple reports are generated, they are zipped for download."
-    elif any(greet in msg_lower for greet in ["hi", "hello", "hey"]): reply = "Hello! I'm LogBot, your assistant for this Threat Analyzer. How can I help you understand the tool or the analysis results?"
-    elif any(bye in msg_lower for bye in ["bye", "thanks", "thank you", "ok"]): reply = "You're welcome! Let me know if anything else comes up."
-    elif "font" in msg_lower and "error" in msg_lower: reply = "A common reason for PDF generation failure is missing 'DejaVuSansCondensed' fonts. Ensure they are placed correctly alongside the application script in the deployment environment."
-    else: reply = "I can help explain terms found in the report (like 'Threat Level', 'Risk Score', 'MITRE Mapping'), how the tool works, or common issues. What would you like to know?"
-    print(f"Chatbot replying: '{reply}'"); return reply
+
+    # Simple pattern-based responses
+    simple_responses = {
+        "hi": "Hey there! 👋 How can I assist you today?",
+        "hello": "Hello! 😊 How can I help with your security analysis?",
+        "how are you": "I'm functioning optimally! Ready to assist you with threat detection 🔍",
+        "what's your name": "You can call me **SentinelBot**, your AI threat assistant.",
+        "tell me a joke": "Why did the computer go to therapy? It had too many *cookies*! 🍪",
+        "what do you do": "I help analyze security logs and detect threats using GenAI models like Gemini.",
+        "what is this app": "This is the **AI Threat Log Analyzer**, designed to detect threats in uploaded logs using GenAI.",
+        "how to use this": "Just upload a file, choose a model (e.g., Gemini), and click Analyze. You'll get a full report!",
+        "supported formats": "You can upload `.txt`, `.pdf`, `.xlsx`, `.csv`, `.log`. `.exe` and `.pcap` are coming soon.",
+        "multiple files": "Yes! Upload multiple files and get individual threat analysis reports.",
+        "threat level": "Threat levels are: 🟢 Low, 🟡 Medium, 🔴 High, 🚨 Critical. It tells how severe a threat is.",
+        "ai models": "Currently, only Gemini is supported. OpenAI, Claude, and DeepSeek are coming soon.",
+        "mitre mapping": "MITRE ATT&CK maps detected behaviors to known attack techniques used by real-world adversaries.",
+        "what is malware": "Malware is malicious software like viruses, worms, and ransomware designed to cause harm.",
+        "what is phishing": "Phishing tricks users into giving sensitive data using fake emails or sites.",
+        "what is ransomware": "Ransomware locks your data and demands payment. Always keep backups!",
+        "what is a firewall": "A firewall monitors and controls network traffic to block unauthorized access.",
+        "zero trust": "'Zero Trust' means never trust by default — every access must be verified.",
+        "what is an ioc": "IOC = Indicator of Compromise. It's something like a suspicious IP or file hash that signals an attack.",
+        "how to upload": "Above this chat, you'll find the file upload section. Drop or browse your files.",
+        "download report": "After analysis, click 'Download PDF' or 'Download JSON' under the results section.",
+        "contact support": "You can [💬 WhatsApp Us](https://wa.me/xxxxxxxxxx) or [📞 Call Us](tel:+1234567890) for live help.",
+        "where is portfolio": "Visit my creator's portfolio: [🌐 Portfolio](https://your-portfolio-link.com)",
+        "can i use openai": "OpenAI model support is coming soon! For now, please use **Gemini**.",
+        "claude model": "Claude integration is in development. Stay tuned!",
+        "i need help": "No problem! You can ask here or [💬 WhatsApp Support](https://wa.me/xxxxxxxxxx).",
+        "talk to someone": "Click [📞 Call Us](tel:+1234567890) or [💬 Chat on WhatsApp](https://wa.me/xxxxxxxxxx) to talk to a real person.",
+    }
+
+    # Direct match for simple responses
+    if msg_lower in simple_responses:
+        reply = simple_responses[msg_lower]
+
+    # Keyword-based logic (fallbacks)
+    elif any(word in msg_lower for word in ["support", "contact"]):
+        reply = "For support, please refer to the Contact link in the header or reach out to the developer (Ajmal Malayil)."
+    elif "mitre" in msg_lower or "att&ck" in msg_lower:
+        reply = "MITRE ATT&CK® is a globally-accessible knowledge base of adversary tactics and techniques based on real-world observations. The report attempts to map findings to relevant technique IDs (e.g., T1059.001 for PowerShell execution)."
+    elif "threat level" in msg_lower:
+        reply = "Threat Level indicates the assessed severity: INFO (Informational), LOW (Minor issue, monitor), MEDIUM (Potential threat, investigation recommended), HIGH (Likely threat, requires prompt attention), CRITICAL (Active compromise or severe vulnerability, immediate action required), N/A (Not Applicable or Undetermined)."
+    elif "risk score" in msg_lower:
+        reply = "Risk Score is an estimated numerical representation (0-100) of the risk, considering the threat level and context. Higher scores indicate greater risk. It's 0 for INFO or N/A levels."
+    elif any(word in msg_lower for word in ["safe", "privacy", "store", "keep files"]):
+        reply = "Uploaded files are processed in memory for analysis. Generated PDF/ZIP reports are stored temporarily in the 'analyzed_reports' directory and are automatically deleted after 24 hours by the cleanup routine. Original uploaded files are not stored long-term on the server after processing."
+    elif any(model.value.lower() in msg_lower for model in AIProvider if model != AIProvider.GEMINI):
+        reply = f"Currently, only the {AIProvider.GEMINI.value} model is implemented and supported for analysis."
+    elif any(word in msg_lower for word in ["how", "work", "steps", "process"]):
+        reply = "The process is: 1. You upload log files (PDF, Excel, text...). 2. The tool extracts text content. 3. The extracted text is sent to the Gemini AI with specific instructions to analyze for threats. 4. The AI returns a structured JSON analysis. 5. A PDF report is generated from the JSON data. 6. If multiple reports are generated, they are zipped for download."
+    elif any(greet in msg_lower for greet in ["hi", "hello", "hey"]):
+        reply = "Hello! I'm LogBot, your assistant for this Threat Analyzer. How can I help you understand the tool or the analysis results?"
+    elif any(bye in msg_lower for bye in ["bye", "thanks", "thank you", "ok"]):
+        reply = "You're welcome! Let me know if anything else comes up."
+    elif "font" in msg_lower and "error" in msg_lower:
+        reply = "A common reason for PDF generation failure is missing 'DejaVuSansCondensed' fonts. Ensure they are placed correctly alongside the application script in the deployment environment."
+    else:
+        reply = "I can help explain terms found in the report (like 'Threat Level', 'Risk Score', 'MITRE Mapping'), how the tool works, or common issues. What would you like to know?"
+
+    print(f"Chatbot replying: '{reply}'")
+    return reply
 
 def clear_outputs():
     """Returns updates dictionary to clear outputs."""
@@ -587,7 +638,7 @@ with gr.Blocks(css=css, theme=gr.themes.Soft()) as demo:
     with gr.Row(elem_id="top-bar"):
         gr.HTML("""
         <div id="top-bar-content">
-            <h1>🛡️ Enterprise Threat Analyzer Pro</h1>
+            <h1>🛡️ Enterprise AI Threat Analyzer</h1>
             <div>
                 <a href='https://ajmalmalayil.pages.dev/' target='_blank'>🌐 Portfolio</a>
                 <a href='https://wa.me/+971544566442' target='_blank'>💬 Contact</a>
@@ -597,7 +648,7 @@ with gr.Blocks(css=css, theme=gr.themes.Soft()) as demo:
 
     with gr.Column(elem_classes="main-content"):
         gr.Markdown("""
-        ## AI-Powered Log Analysis for Security Insights
+        ## 𝗚𝘂𝗮𝗿𝗱𝗶𝗮𝗻𝗔𝗜– 𝗔 𝗚𝗲𝗻𝗔𝗜-𝗣𝗼𝘄𝗲𝗿𝗲𝗱 𝗖𝘆𝗯𝗲𝗿𝘀𝗲𝗰𝘂𝗿𝗶𝘁𝘆 𝗧𝗵𝗿𝗲𝗮𝘁 𝗔𝗻𝗮𝗹𝘆𝘇𝗲𝗿
         Upload log files (text, PDF, Excel) to identify potential threats, assess risks, and get recommended actions using Google's Gemini AI.
         """)
         gr.Markdown("<span style='color:var(--danger-text-color, #dc3545); font-weight:600;'>⚠️ Security & Privacy:</span> Reports are auto-deleted after 24 hours. Uploaded files aren't stored long-term.",
@@ -626,8 +677,8 @@ with gr.Blocks(css=css, theme=gr.themes.Soft()) as demo:
         with gr.Column(elem_id="chat-container") as chat_section: # Initially hidden
             chat_interface = gr.ChatInterface(
                 fn=chatbot_reply,
-                chatbot=gr.Chatbot(label="💬 Chat with LogBot", height=400, show_copy_button=True, avatar_images=(None, "https://img.icons8.com/color/48/bot.png")), # Ensure type is inferred or set if needed
-                textbox=gr.Textbox(placeholder="Ask about the tool, results, terms...", container=False, scale=7),
+                chatbot=gr.Chatbot(label="🛡️ AI Security Chatbot", height=400, show_copy_button=True, avatar_images=(None, "https://www.shutterstock.com/image-vector/cute-smiling-robotai-chat-bot-hi-659742613")), # Ensure type is inferred or set if needed
+                textbox=gr.Textbox(placeholder="Ask about the tool, Ask about threats, firewalls, results, models, usage..., terms...", container=False, scale=7),
                 theme="soft",
                 # Removed explicit type="messages" as Chatbot defines its structure
                 # examples = ["Explain Threat Level", "What is MITRE?", "Why did PDF fail?", "How does it work?"] # Add examples if desired
@@ -671,7 +722,7 @@ with gr.Blocks(css=css, theme=gr.themes.Soft()) as demo:
 
     gr.HTML("""
     <div class='footer'>
-        🛡️ Enterprise Threat Analyzer Pro | Developed by <b>Ajmal Malayil</b> | Powered by Gemini AI
+        🛡️ Enterprise AI Threat Analyzer | Developed by <b>Ajmal Malayil</b> | Powered by Gen AI
     </div>
     """) # Placeholder developer name
 
