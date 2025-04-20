@@ -57,6 +57,7 @@ except Exception as e:
 
 REPORTS_DIR = "analyzed_reports"
 os.makedirs(REPORTS_DIR, exist_ok=True)
+logger.info(f"Ensured '{REPORTS_DIR}' folder exists at startup.")
 
 class AIProvider(Enum):
     GEMINI = "Gemini"
