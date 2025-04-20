@@ -677,7 +677,7 @@ with gr.Blocks(css=css, theme=gr.themes.Soft()) as demo:
         with gr.Column(elem_id="chat-container") as chat_section: # Initially hidden
             chat_interface = gr.ChatInterface(
                 fn=chatbot_reply,
-                chatbot=gr.Chatbot(label="🛡️ AI Security Chatbot", height=400, show_copy_button=True, avatar_images=(None, "https://www.shutterstock.com/image-vector/cute-smiling-robotai-chat-bot-hi-659742613")), # Ensure type is inferred or set if needed
+                chatbot=gr.Chatbot(label="🛡️ AI Security Chatbot", height=400, show_copy_button=True, avatar_images=(None, "https://img.icons8.com/?size=100&id=ErmeMIUGMycn&format=png&color=000000")), # Ensure type is inferred or set if needed
                 textbox=gr.Textbox(placeholder="Ask about the tool, Ask about threats, firewalls, results, models, usage..., terms...", container=False, scale=7),
                 theme="soft",
                 # Removed explicit type="messages" as Chatbot defines its structure
